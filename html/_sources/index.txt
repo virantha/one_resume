@@ -11,7 +11,9 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   one_resume
+   readme
+   authors
+   contributing
 
 Recent Changes
 ==============
