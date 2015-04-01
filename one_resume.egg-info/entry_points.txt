@@ -1,0 +1,3 @@
+[console_scripts]
+one_resume = one_resume.one_resume:main
+
