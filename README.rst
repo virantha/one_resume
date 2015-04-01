@@ -21,6 +21,14 @@ See docs
 
 Installation
 ############
+Please note that the lxml python library requires a C compiler.  On Mac OS X, you need to make
+sure you have XCode plus the the XCode command line utilities installed:
+
+.. code-block: bash
+
+    $ xcode-select --install
+
+Then, it's simply a matter of:
 
 .. code-block: bash
 
