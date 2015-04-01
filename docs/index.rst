@@ -3,15 +3,17 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-OneResume API Reference (version |release|)
-====================================
+OneResume Documentation (version |release|)
+===========================================
 
 Contents:
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
-   one_resume
+   readme
+   authors
+   contributing
 
 Recent Changes
 ==============
