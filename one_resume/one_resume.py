@@ -1,5 +1,5 @@
 #!/usr/bin/env python2.7
-# Copyright 2014 Virantha Ekanayake All Rights Reserved.
+# Copyright 2013 Virantha Ekanayake All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,152 +13,150 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""
+    OneResume
+
+        - Write your resume in YAML
+        - Output it to word, html, txt, etc
+"""
+from __future__ import print_function
+
 import argparse
 import sys, os
 import logging
-import shutil
-
-from version import __version__
 import yaml
+from plugin import Plugin
 
 
-"""
-   
-.. automodule:: one_resume
-    :private-members:
-"""
+def error(text):
+    print("ERROR: %s" % text)
+    sys.exit(-1)
+
+def yaml_include(loader, node):
+    # Get the path out of the yaml file
+    file_name = os.path.join(os.path.dirname(loader.name), node.value)
+    print (file_name)
+    with file(file_name) as inputfile:
+        return yaml.load(inputfile)
+
+yaml.add_constructor("!include", yaml_include)
 
 class OneResume(object):
-    """
-        The main clas.  Performs the following functions:
-
-    """
 
     def __init__ (self):
-        """ 
-        """
-        self.config = None
+        #Plugin.load("plugins/")
+        script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+        Plugin.load(os.path.join(script_dir,"plugins"))
+        self.allowed_filetypes = []
+        self.allowed_formats = []
+        for p, p_class in Plugin.registered.items():
+            print("Registered output plugin type %s" % p)
+            self.allowed_filetypes.append(p_class.template_file_extension)
+            self.allowed_formats.append(p.split('Resume')[0])
 
-    def _get_config_file(self, config_file):
-        """
-           Read in the yaml config file
-
-           :param config_file: Configuration file (YAML format)
-           :type config_file: file
-           :returns: dict of yaml file
-           :rtype: dict
-        """
-        with config_file:
-            myconfig = yaml.load(config_file)
-        return myconfig
-
-
-    def get_options(self, argv):
-        """
-            Parse the command-line options and set the following object properties:
-
-            :param argv: usually just sys.argv[1:]
-            :returns: Nothing
-
-            :ivar debug: Enable logging debug statements
-            :ivar verbose: Enable verbose logging
-            :ivar config: Dict of the config file
-
-        """
-        p = argparse.ArgumentParser(
-                description = "",
-                epilog = "OneResume version %s (Copyright 2014 Virantha Ekanayake)" % __version__,
-                )
+    def getOptions(self, argv):
+        p = argparse.ArgumentParser(prog="oneresume.py")
 
         p.add_argument('-d', '--debug', action='store_true',
             default=False, dest='debug', help='Turn on debugging')
 
         p.add_argument('-v', '--verbose', action='store_true',
             default=False, dest='verbose', help='Turn on verbose mode')
+        p.add_argument('-s', '--skip-substitution', action='store_true',
+            default=False, dest='skip', help='Skip the text substitution and just write out the template as is (useful for pretty-printing')
 
-        p.add_argument('-m', '--mail', action='store_true',
-            default=False, dest='mail', help='Send email after conversion')
+        # Now split up the options on whether we just run one template rendering
+        # or use a "batch" mode to read a yaml config file to run multiple
+        subparsers = p.add_subparsers(help="Type of processing to run",
+                                        dest = "subparser_name")
 
-        #---------
-        # Single or watch mode
-        #--------
-        single_or_watch_group = p.add_mutually_exclusive_group(required=True)
-        # Positional argument for single file conversion
-        single_or_watch_group.add_argument("pdf_filename", nargs="?", help="Scanned pdf file to OCR")
-        # Watch directory for watch mode
-        single_or_watch_group.add_argument('-w', '--watch', 
-             dest='watch_dir', help='Watch given directory and run ocr automatically until terminated')
+        parser_singlefile = subparsers.add_parser('single', help='Run a single conversion')
+        parser_singlefile.add_argument('-t', '--template-file', required=True, 
+            help='Template filename %s' % self.allowed_filetypes)
+        parser_singlefile.add_argument('-y', '--yaml-resume-file', required=True, 
+            help='Resume yaml filename')
+        parser_singlefile.add_argument('-o', '--output-file', required=True, 
+            help='Output filename')
+        parser_singlefile.add_argument('-f', '--format', required=True, 
+            choices = self.allowed_formats,
+            help='Conversion type %s' % self.allowed_formats )
 
-        #-----------
-        # Filing options
-        #----------
-        filing_group = p.add_argument_group(title="Filing optinos")
-        filing_group.add_argument('-f', '--file', action='store_true',
-            default=False, dest='enable_filing', help='Enable filing of converted PDFs')
-        filing_group.add_argument('-c', '--config', type = argparse.FileType('r'),
-             dest='configfile', help='Configuration file for defaults and PDF filing')
-        filing_group.add_argument('-e', '--evernote', action='store_true',
-            default=False, dest='enable_evernote', help='Enable filing to Evernote')
+
+        parser_configfile = subparsers.add_parser('batch', help="Run multiple conversions using a yaml config file as input")
+        parser_configfile.add_argument('-c', '--config-file', required=True, type=argparse.FileType('r'),
+             help='configuration YAML filename ' )
 
 
         args = p.parse_args(argv)
 
         self.debug = args.debug
         self.verbose = args.verbose
-        self.pdf_filename = args.pdf_filename
-        self.watch_dir = args.watch_dir
-        self.enable_email = args.mail
+        self.skip = args.skip
 
-        if self.debug:
+        if args.debug:
             logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
-        if self.verbose:
+        if args.verbose:
             logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-        # Parse configuration file (YAML) if specified
-        if args.configfile:
-            self.config = self._get_config_file(args.configfile)
-            logging.debug("Read in configuration file")
-            logging.debug(self.config)
-
-        if args.enable_evernote:
-            self.enable_evernote = True
+        # Normal options
+        if args.subparser_name == 'single':
+            self.config = yaml.load("""-
+                                        data: %s
+                                        outputs:
+                                            - 
+                                                format: %s
+                                                template: %s
+                                                output: %s
+                                    """ % (args.yaml_resume_file, args.format, args.template_file, args.output_file ))
         else:
-            self.enable_evernote = False
+            config_file = args.config_file
+            logging.debug("Reading configuration file %s" % config_file)
+            self.config = yaml.load(config_file)
+            config_file.close()
 
-        if args.enable_filing or args.enable_evernote:
-            self.enable_filing = True
-            if not args.configfile:
-                p.error("Please specify a configuration file(CONFIGFILE) to enable filing")
-        else:
-            self.enable_filing = False
+    def run_rendering(self):
+        """
+            Based on self.config, instantiate each plugin conversion and run it
+        """
+        
+        if not isinstance(self.config, list):
+            # If the config was not a list, just convert this one element into a list
+            self.config = [self.config]
 
-        self.watch = False
+        for i, c in enumerate(self.config):
+            # For each conversion
+            if not 'data' in c:
+                # Check that the yaml resume file is specified
+                error("Configuration file has not defined 'data' with resume yaml file")
+            else:
+                with open(c['data']) as resume_file:
+                    self.resume = yaml.load(resume_file)
 
-        if args.watch_dir:
-            logging.debug("Starting to watch")
-            self.watch = True
-
-        if self.enable_email:
-            if not args.configfile:
-                p.error("Please specify a configuration file(CONFIGFILE) to enable email")
+            for output in c['outputs']:
+                fmt = output['format']
+                # Check that we have a plugin whose classname starts with this format
+                assert any([x.startswith(fmt) for x in Plugin.registered])
+                template_file = output['template']
+                filebasename,filetype = os.path.splitext(template_file)
+                if filetype[1:] not in self.allowed_filetypes:
+                    error("File type/extension %s is not one of following: %s" % (filetype,' '.join(self.allowed_filetypes)))
+                output_filename = output['output']
+                # Instantiate the required conversion plugin
+                print ("Creating %s ..." % output_filename, end='')
+                text = Plugin.registered['%sResume' % fmt](template_file, self.resume, self.skip)
+                text.render(output_filename)
+                print (" done")
 
 
     def go(self, argv):
-        """ 
-            The main entry point into OneResume
-
-            #. Do something
-            #. Do something else
-        """
         # Read the command line options
-        self.get_options(argv)
+        self.getOptions(argv)
+        self.run_rendering()
 
-
-def main():
+if __name__ == '__main__':
     script = OneResume()
     script.go(sys.argv[1:])
 
-if __name__ == '__main__':
-    main()
 
