@@ -208,7 +208,7 @@ class WordResume(Plugin):
                     elements_to_delete.append(loop_tree_start)
                     loop_tree.insert(0, copy.deepcopy(loop_tree_start))
 
-                    logging.debug(etree.tostring(loop_tree, pretty_print=True))
+                    #logging.debug(etree.tostring(loop_tree, pretty_print=True))
             if '>' in text:
                 assert inside_loop
                 logging.debug("Found >")
@@ -236,6 +236,7 @@ class WordResume(Plugin):
                     assert (node_index == loop_tree_index)
                     
         logging.debug("Found a loop spanning %d paragraphs, %d" % (loop_tree_index+1, len(loop_tree)))
+        logging.debug(etree.tostring(loop_tree, pretty_print=True))
 
         # Max possible set of subtags
         subtag_keys = self._get_all_keys_in_list_of_dicts(subtag_list)
@@ -270,15 +271,18 @@ class WordResume(Plugin):
         # Now, add the loop_instance to the body
         body = loop_tree_start.getparent()
         index_to_insert_at = body.index(loop_tree_start)+1
-        logging.debug("Inserting at index %d" % index_to_insert_at)
+        #logging.debug("Inserting at index %d" % index_to_insert_at)
+        logging.debug("Inserting at index %d, %d instances" % (index_to_insert_at, len(loop_instances)))
         for inst in loop_instance:
+            #logging.debug(etree.tostring(body, pretty_print=True))
             for child in inst.getchildren():
                 body.insert(index_to_insert_at, child)
                 index_to_insert_at += 1
 
         # Delete the loop template
         for e in elements_to_delete:
-            body.remove(e)
+            #body.remove(e)
+            pass
 
 
         if '[!' in my_etree.text:
@@ -313,7 +317,6 @@ class WordResume(Plugin):
                         node.text = node.text.replace('['+tag+']', tag)
                         if '|' in node.text:
                             # We have alternate text so just use that
-                            exit
                             node.text = node.text.split('|')[1]
 
         return tags
