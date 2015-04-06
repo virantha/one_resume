@@ -85,6 +85,7 @@ class Word2Resume(Plugin):
     'dcterms':  'http://purl.org/dc/terms/'}
 
     def __init__ (self, template_file, resume_data, skip):
+        self.mTag = r"""\[(?P<tag>[\s\w\_]+)\]"""
         self.skip = skip
         self.resume_data = resume_data
         self.template_filename = template_file
@@ -165,19 +166,42 @@ class Word2Resume(Plugin):
         logging.debug("Found a loop spanning %d paragraphs, %d" % (node_index, len(loop_tree)))
         return loop_start_node, loop_tree, list_of_all_loop_nodes
 
-    def _find_subtags_in_loop(self, my_etree, subtag_list):
+    def _make_loop_instance(self, loop_tree, section_data, all_tagnames_in_section):
+
+        # Copy the loop_tree to make an instance we can fill in with the results from 
+        # the section names
+        loop_instance = copy.deepcopy(loop_tree)
+
+        for node, text, node_i in self._itersiblingtext(loop_instance):
+            if '<' in text: node.text = node.text.replace('<','')
+            if '>' in text: node.text = node.text.replace('>','')
+
+            # For every node with text in it, don't even try to find a tag name
+            # Instead, brute force it by trying to sub every possible tag in every node
+            if node.text:
+                for key in all_tagnames_in_section:
+                    logging.debug("Looking for key %s" % key)
+                    instance_text = section_data.get(key, '')  # Replace any key that isn't specified for this instance with a blank
+                    node.text = node.text.replace('['+key+']', str(instance_text))
+        return loop_instance
+
+    def _fill_in_section(self, section_etree, section_list):
         """
+            section_list is a list of dicts containing the contents for the current section. For example:
+                
+                [
+                 { key1:val1, key2:val2 },
+                 { key1:val1, key2:val2, key3:val3},
+                ]
+
             Assumptions:
                 - All loop starts are in their own paragraphs
                 - loops can span multiple paragraphs
                 - Any content after the loop must be in different paragraph
                 - No tables anywhere!
         """
-        mTag = r"""\[(?P<tag>[\s\w\_]+)\]"""
-        tags = OrderedDict()
-
         # Get the parent paragraph 
-        paragraph = self._get_parent_paragraph(my_etree)
+        paragraph = self._get_parent_paragraph(section_etree)
 
         # Build up a copy of the loop sub-tree in loop_tree. We will instance this as many times as needed.
         # Also, keep track of all the elements belonging to the loop body in elements_to_delete
@@ -185,33 +209,12 @@ class Word2Resume(Plugin):
         loop_start_node, loop_tree, elements_to_delete = self._extract_loop(paragraph)
         
         # Max possible set of subtags
-        subtag_keys = self._get_all_keys_in_list_of_dicts(subtag_list)
+        all_tag_names_in_section = self._get_all_keys_in_list_of_dicts(section_list)
 
+        # Iterate and create the loop with the section data
         loop_instance = []
-        for subtag_dict in subtag_list:
-            loop_done = False
-            # Create a copy of the loop_tree
-            loop_instance.append(copy.deepcopy(loop_tree))
-            logging.debug("Applying loop element: %s" % subtag_dict)
-
-            for node, text, node_i in self._itersiblingtext(loop_instance[-1]):
-                logging.debug("Going through text")
-                if '<' in text:
-                    node.text = node.text.replace('<','')
-                if '>' in text:
-                    node.text = node.text.replace('>','')
-                tag_text = re.findall(mTag, text)
-                logging.debug("tag text is %s" % tag_text)
-                if node.text:
-                    for key in subtag_keys:
-                        logging.debug("Looking for key %s" % key)
-                        if key in subtag_dict:
-                            node.text = node.text.replace('['+key+']', str(subtag_dict[key]))
-                        else:
-                            node.text = node.text.replace('['+key+']', '')
-                for tag in tag_text:
-                    tag = tag.lower()
-                    tags[tag] = node
+        for section_data in section_list:
+            loop_instance.append(self._make_loop_instance(loop_tree, section_data, all_tag_names_in_section))
 
         # Now, add the loop_instance to the body
         body = loop_start_node.getparent()
@@ -221,16 +224,15 @@ class Word2Resume(Plugin):
             for child in inst.getchildren():
                 body.insert(index_to_insert_at, child)
                 index_to_insert_at += 1
-            #logging.debug(etree.tostring(body, pretty_print=True))
 
         # Delete the loop template
         for e in elements_to_delete:
             body.remove(e)
 
-
-        if '[!' in my_etree.text:
+        # Remove a section heading name if it's preceded with a bang (for example, a contact section, where
+        # we don't need to title the section
+        if '[!' in section_etree.text:
             paragraph.getparent().remove(paragraph)
-        return tags
 
     def _find_tags(self, my_etree, tags_to_find, char_to_stop_on=None):
         """
@@ -282,14 +284,15 @@ class Word2Resume(Plugin):
 
         body = self.doc_etree.xpath('/w:document/w:body', namespaces=self.nsprefixes)[0]
         self.collapse_tags(body)
+
         if self.skip:
             return
 
         # Get a list of all the top-level tags
         tags = self._find_tags(self.doc_etree, self.resume_data.keys())
-        for section_name, node in tags.items():
+        for section_name, section_node in tags.items():
             logging.debug("Subtag search for %s" % section_name)
-            subtags = self._find_subtags_in_loop(node,self.resume_data[section_name])
+            self._fill_in_section(section_node, self.resume_data[section_name])
             logging.debug("Finished find_subtags_in_loop")
         return
 
@@ -311,7 +314,6 @@ class Word2Resume(Plugin):
                 for node in sib.iter(tag=etree.Element):
                     if self._check_element_is(node, 't'):
                         yield (node, node.text, i)
-
 
 
     def collapse_tags(self, my_etree):
