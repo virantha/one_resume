@@ -1,5 +1,5 @@
 
-# Copyright 2013 Virantha Ekanayake All Rights Reserved.
+# Copyright 2015 Virantha Ekanayake All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -84,8 +84,12 @@ class Word2Resume(Plugin):
     'dcmitype': 'http://purl.org/dc/dcmitype/',
     'dcterms':  'http://purl.org/dc/terms/'}
 
+    char_loop_start = '<'
+    char_loop_end   = '>'
+    char_tag_start  = '['
+    char_tag_end    = ']'
+
     def __init__ (self, template_file, resume_data, skip):
-        self.mTag = r"""\[(?P<tag>[\s\w\_]+)\]"""
         self.skip = skip
         self.resume_data = resume_data
         self.template_filename = template_file
@@ -98,8 +102,8 @@ class Word2Resume(Plugin):
         """
             Needs read_contents to have been called
         """
-        self._parse_xml()
-        self._write_and_close_docx(self.doc_etree, output_filename)
+        self.substitute_data()
+        self.write_and_close_docx(self.doc_etree, output_filename)
 
     def read_contents(self, filename):
         """
@@ -146,13 +150,13 @@ class Word2Resume(Plugin):
             if '<' in text:
                 assert not inside_loop
                 inside_loop = True
-                loop_start_node = node.getparent().getparent()  # Save this to return 
+                loop_start_node = self._get_parent_paragraph(node)
                 self._assert_element_is(loop_start_node, 'p')
 
             if inside_loop:
                 # This text node is enclosed by a run, which is in turn enclosed by the paragraph
                 # This paragraph is what we want to extract
-                current_paragraph = node.getparent().getparent()
+                current_paragraph = self._get_parent_paragraph(node)
                 self._assert_element_is(current_paragraph, 'p')
                 if prev_paragraph != current_paragraph:
                     loop_tree.insert(node_index, copy.deepcopy(current_paragraph))
@@ -234,7 +238,7 @@ class Word2Resume(Plugin):
         if '[!' in section_etree.text:
             paragraph.getparent().remove(paragraph)
 
-    def _find_tags(self, my_etree, tags_to_find, char_to_stop_on=None):
+    def _find_sections(self, my_etree, tags_to_find, char_to_stop_on=None):
         """
             Build a dict of all the top-level tags in the document and the corresponding
             text node.
@@ -269,6 +273,7 @@ class Word2Resume(Plugin):
                         node.text = node.text.replace('['+tag+']', tag)
                         if '|' in node.text:
                             # We have alternate text so just use that
+                            # FIXME:  This is wrong, we need to sub out the text, and not replace the whole node!
                             node.text = node.text.split('|')[1]
 
         return tags
@@ -280,7 +285,7 @@ class Word2Resume(Plugin):
                 mykeys.add(k)
         return list(mykeys)
 
-    def _parse_xml(self):
+    def substitute_data(self):
 
         body = self.doc_etree.xpath('/w:document/w:body', namespaces=self.nsprefixes)[0]
         self.collapse_tags(body)
@@ -289,8 +294,8 @@ class Word2Resume(Plugin):
             return
 
         # Get a list of all the top-level tags
-        tags = self._find_tags(self.doc_etree, self.resume_data.keys())
-        for section_name, section_node in tags.items():
+        sections = self._find_sections(self.doc_etree, self.resume_data.keys())
+        for section_name, section_node in sections.items():
             logging.debug("Subtag search for %s" % section_name)
             self._fill_in_section(section_node, self.resume_data[section_name])
             logging.debug("Finished find_subtags_in_loop")
@@ -318,8 +323,12 @@ class Word2Resume(Plugin):
 
     def collapse_tags(self, my_etree):
         """
-            Find the special tags and collapse all the text in them to one single paragraph.
-            This works because we know there shouldn't be any formatting inside the tag name
+            Find the special tags and collapse all the text in them to one single paragraph. This
+            method works in-place, modifying the passed in etree.
+            This works because we know there shouldn't be any formatting inside the tag name.
+
+
+            :rtype: Nothing
         """
         chars = []
         is_tag_start = False      # True if inside tag
@@ -361,7 +370,7 @@ class Word2Resume(Plugin):
                 node.text = ""
 
 
-    def _write_and_close_docx (self, xml_content, output_filename):
+    def write_and_close_docx (self, xml_content, output_filename):
         """ Create a temp directory, expand the original docx zip.
             Write the modified xml to word/document.xml
             Zip it up as the new docx

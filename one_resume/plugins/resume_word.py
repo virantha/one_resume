@@ -1,5 +1,5 @@
 
-# Copyright 2013 Virantha Ekanayake All Rights Reserved.
+# Copyright 2015 Virantha Ekanayake All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,9 +93,6 @@ class WordResume(Plugin):
         self.zipfile = zipfile.ZipFile(self.template)
         self.doc_etree = self._get_doc_from_docx()
 
-        #self._test_func()
-        #self._write_and_close_docx(self.doc_etree)
-
     def render(self, output_filename):
         self._parse_xml()
         self._write_and_close_docx(self.doc_etree, output_filename)
@@ -105,12 +102,6 @@ class WordResume(Plugin):
     def _assert_element_is(self, element, type_char):
         assert self._check_element_is(element, type_char)
 
-    def _get_all_text_in_node(self, node):
-        all_txt = []
-        for txt in node.itertext(tag=etree.Element):
-            all_txt.append(txt)
-        return ''.join(all_txt)
-
     def _get_parent_paragraph(self, text_node):
         self._assert_element_is(text_node, 't')
         run = text_node.getparent()
@@ -118,53 +109,6 @@ class WordResume(Plugin):
         paragraph = run.getparent()
         self._assert_element_is(paragraph, 'p')
         return paragraph
-
-    def _iter_loops_in_tree(self, my_etree, subtag_list):
-        loop_tree = etree.Element("root")  # Keep a copy of the loop that we find
-        # Get the parent paragraph 
-        paragraph = self._get_parent_paragraph(my_etree)
-        for node, text, node_index in self._itersiblingtext(paragraph):
-            if '<' in text:
-                logging.debug("Found <")
-                if inside_loop:  # embedded loop!
-                    # Let's recurse on this embedded loop
-                    #  We need the immediately preceding tag text to figure
-                    # out what dict we need to recurse on
-                    self._find_subtags_in_loop
-                else:
-                    inside_loop = True
-                    loop_tree_start = (node.getparent().getparent())
-                    self._assert_element_is(loop_tree_start, 'p')
-
-                    elements_to_delete.append(loop_tree_start)
-                    loop_tree.insert(0, copy.deepcopy(loop_tree_start))
-
-                    logging.debug(etree.tostring(loop_tree, pretty_print=True))
-            if '>' in text:
-                assert inside_loop
-                logging.debug("Found >")
-                loop_done = True
-                if node_index != loop_tree_index:
-                    self._assert_element_is(node.getparent().getparent(), 'p')
-                    loop_tree.insert(loop_tree_index+1,  copy.deepcopy(node.getparent().getparent()))
-                    loop_tree_index += 1
-                    elements_to_delete.append(node.getparent().getparent())
-                    assert (node_index == loop_tree_index)
-                break
-            if inside_loop:
-                # Have to check if we've moved to a different paragraph
-                # If so, we need to add it to the tree
-                logging.debug("Here")
-                if node_index != loop_tree_index:
-                    logging.debug("Adding inside loop text node")
-                    self._assert_element_is(node.getparent().getparent(), 'p')
-
-                    loop_tree.insert(loop_tree_index+1,  copy.deepcopy(node.getparent().getparent()))
-                    loop_tree_index += 1
-
-                    logging.debug(etree.tostring(loop_tree, pretty_print=True))
-                    elements_to_delete.append(node.getparent().getparent())
-                    assert (node_index == loop_tree_index)
 
     def _find_subtags_in_loop(self, my_etree, subtag_list):
         """
