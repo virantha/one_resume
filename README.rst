@@ -1,5 +1,8 @@
-OneResumé - 
+OneResumé - Usage Guide
 =========================================
+OneResumé is a data-driven resumé generator for text and Microsoft Word
+documents.  Write your resumé content in YAML_ and quickly and easily generate
+multiple versions and formats of your resumé using this program.
 
 |image_pypi| |image_downloads| |image_license| |passing| |quality| |Coverage Status|
 
@@ -14,9 +17,14 @@ Features
 - Keep your resumé content in simple text files and automatically generate
   different versions of your resumés in multiple formats (currently supports
   generating text and Microsoft Word .docx format resumés)
-- Allows you to break up your resumé content into multiple files, so you can pick and choose the sections you want for each generated version
-    - For example, if you want one resumé with your publications, but want to skip them for a shorter version, you can maintain the publications
-      list in a separate input file, and keep both generated resumés synchronized with the other content.
+
+- Allows you to break up your resumé content into multiple files, so you can
+  pick and choose the sections you want for each generated version. For
+  example, if you want one resumé with your publications, but want to skip them
+  for a shorter version, you can maintain the publications list in a separate
+  input file, and keep both generated resumés synchronized with the other
+  content.
+
 - Plugin architecture, so you can easily extend to other formats (LaTex coming soon)
 
 Usage:
@@ -241,9 +249,10 @@ Using this template, and the data content above, would yield the following text:
 
 Writing Templates for Word Resumés
 ----------------------------------
-Word templates are created as just a regular ``.docx`` file (Note, please make sure you
-do *not* use Word 97 .doc format).  Here's some simple content you might type into a word document.  You
-can format it however you want (bullets/styles/bold/underlines/etc) as long as you don't use tables.
+Word templates are just regular ``.docx`` files. Please note that you cannot use the old
+Word 97 ``.doc`` format.    You can format it however you want, including bullets and styles.  However, tables
+are *not* supported at this time.  Here's some simple content you might type into a word document to generate
+a resume from the above YAML:
 
 ::
 
@@ -274,12 +283,21 @@ The syntax is as follows:
 - Any section name with a ``!`` preceding it will not generate the section text (for instance, no text ``Contact`` will appear in the generated resume).
 - Using a ``|`` symbol in a section header will use the proceeding text instead of the section name in the outputted resume. So, the final section above will be rendered with a title of ``Mad Skills`` instead of ``Skills``.
 
-Here's a screenshot of the template .docx (you can also find this in the repository):
+Here's a screenshot of the template .docx (you can also find this in the repository_):
 
 .. image:: https://raw.githubusercontent.com/virantha/one_resume/master/images/word_template.png
     :alt: Word resume template
     :width: 679
     :align: center
+
+And, running OneResumé on it will generate the following:
+
+.. image:: https://raw.githubusercontent.com/virantha/one_resume/master/images/word_output.png
+    :alt: Word resume output
+    :width: 679
+    :align: center
+
+
 
 Installation
 ############
@@ -304,6 +322,7 @@ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 .. _YAML: http://en.wikipedia.org/wiki/YAML
 .. _Mako: http://www.makotemplates.org
+.. _repository: https://github.com/virantha/one_resume/blob/master/examples/resume.docx?raw=true
 .. |image_pypi| image:: https://badge.fury.io/py/one_resume.png
    :target: https://pypi.python.org/pypi/one_resume
 .. |image_downloads| image:: https://pypip.in/d/one_resume/badge.png
