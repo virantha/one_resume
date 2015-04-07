@@ -1,0 +1,54 @@
+contact:
+    -
+        name: S. Holmes
+        address: 221B Baker Street, St Marylebone, London, England
+        phone: 12-3456
+        email: sherlock@holmesconsulting.com
+        www: http://www.gotcrime.com
+
+skills:
+    - 
+        type: Current
+        skill_list:  > 
+            Crime solving, cigarette-ash classification, crypto-analysis, disguise
+
+    -
+        type: Past
+        skill_list: > 
+            Fencing, violin
+
+education:
+    - 
+        degree: BA
+        university: Christ Church College
+        address: Oxford, England
+        field: Chemistry
+        date: 1876
+        gpa: 5.0
+    - 
+        degree: MA 
+        university: Sidney Sussex
+        address: Cambridge
+        date: 1878
+        field: Criminology
+        gpa: 3.9
+
+experience:
+    - 
+        company: Baker Street Detectives
+        location: London
+        position: Consulting Detective
+        date: "1880 to 1903"
+        summary: >
+            Brought several notorious criminals to justice.  Supported the intelligence services and recovered key
+            government property. 
+
+    - 
+        company: Beekeeping Solutions 
+        location: Sussex Downs
+        position: Beekeeper
+        date: "1904-1914"
+        summary: >
+            Made honey.
+
+
