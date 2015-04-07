@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>OneResume - &mdash; OneResume 0.1.0 documentation</title>
+    <title>OneResumé - Usage Guide &mdash; OneResume 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -47,9 +47,14 @@
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">OneResume -</a><ul>
+<li><a class="reference internal" href="#">OneResumé - Usage Guide</a><ul>
 <li><a class="reference internal" href="#features">Features</a></li>
-<li><a class="reference internal" href="#usage">Usage:</a></li>
+<li><a class="reference internal" href="#usage">Usage:</a><ul>
+<li><a class="reference internal" href="#writing-resume-content">Writing Resumé Content</a></li>
+<li><a class="reference internal" href="#writing-templates-for-text-resumes">Writing Templates for Text Resumés</a></li>
+<li><a class="reference internal" href="#writing-templates-for-word-resumes">Writing Templates for Word Resumés</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#installation">Installation</a></li>
 <li><a class="reference internal" href="#disclaimer">Disclaimer</a></li>
 </ul>
@@ -90,8 +95,11 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="oneresume">
-<h1>OneResume -<a class="headerlink" href="#oneresume" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="oneresume-usage-guide">
+<h1>OneResumé - Usage Guide<a class="headerlink" href="#oneresume-usage-guide" title="Permalink to this headline">¶</a></h1>
+<p>OneResumé is a data-driven resumé generator for text and Microsoft Word
+documents.  Write your resumé content in <a class="reference external" href="http://en.wikipedia.org/wiki/YAML">YAML</a> and quickly and easily generate
+multiple versions and formats of your resumé using this program.</p>
 <p><a class="reference external" href="https://pypi.python.org/pypi/one_resume"><img alt="image_pypi" src="https://badge.fury.io/py/one_resume.png" /></a> <a class="reference external" href="https://crate.io/packages/one_resume?version=latest"><img alt="image_downloads" src="https://pypip.in/d/one_resume/badge.png" /></a> <img alt="image_license" src="https://pypip.in/license/one_resume/badge.png" /> <img alt="passing" src="https://scrutinizer-ci.com/g/virantha/one_resume/badges/build.png?b=master" /> <img alt="quality" src="https://scrutinizer-ci.com/g/virantha/one_resume/badges/quality-score.png?b=master" /> <a class="reference external" href="https://coveralls.io/r/virantha/one_resume"><img alt="Coverage Status" src="https://coveralls.io/repos/virantha/one_resume/badge.png?branch=develop" /></a></p>
 <ul class="simple">
 <li>Free and open-source software: ASL2 license</li>
@@ -102,19 +110,267 @@
 <div class="section" id="features">
 <h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>Kitchen</li>
-<li>Sink</li>
+<li>Keep your resumé content in simple text files and automatically generate
+different versions of your resumés in multiple formats (currently supports
+generating text and Microsoft Word .docx format resumés)</li>
+<li>Allows you to break up your resumé content into multiple files, so you can
+pick and choose the sections you want for each generated version. For
+example, if you want one resumé with your publications, but want to skip them
+for a shorter version, you can maintain the publications list in a separate
+input file, and keep both generated resumés synchronized with the other
+content.</li>
+<li>Plugin architecture, so you can easily extend to other formats (LaTex coming soon)</li>
 </ul>
 </div>
 <div class="section" id="usage">
 <h2>Usage:<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
-<p>See docs</p>
+<p>OneResumé can be run in single resumé mode, or batch mode (in order to generate multiple different resumés in one go).  The former usage is shown
+below:</p>
+<div class="highlight-python"><div class="highlight"><pre>one_resume.py single -t template_filename -y resumé_content_filename -o output_filename -f Text
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">-f</span></code> option is the format you want to use, currently either <code class="docutils literal"><span class="pre">Text</span></code> or <code class="docutils literal"><span class="pre">Word</span></code>.  The templates and content files
+will be discussed in the next section.</p>
+<p>If you want to run in batch mode:</p>
+<div class="highlight-python"><div class="highlight"><pre>one_resume.py batch -c config.yml
+</pre></div>
+</div>
+<p>The <code class="docutils literal"><span class="pre">config.yml</span></code> configuration file is a <a class="reference external" href="http://en.wikipedia.org/wiki/YAML">YAML</a> file structured as follows:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="p-Indicator">-</span> <span class="l-Scalar-Plain">data</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé1.yaml</span>
+  <span class="l-Scalar-Plain">outputs</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">format</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Word</span>
+        <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé-template1.docx</span>
+        <span class="l-Scalar-Plain">output</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">generated/Resumé_standard.docx</span>
+
+<span class="p-Indicator">-</span> <span class="l-Scalar-Plain">data</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé1.yaml</span>
+  <span class="l-Scalar-Plain">outputs</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">format</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Text</span>
+        <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé-template1.txt</span>
+        <span class="l-Scalar-Plain">output</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">generated/Resumé_standard.txt</span>
+
+<span class="p-Indicator">-</span> <span class="l-Scalar-Plain">data</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé1.yml</span>
+  <span class="l-Scalar-Plain">outputs</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">format</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Word</span>
+        <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé-template-short.docx</span>
+        <span class="l-Scalar-Plain">output</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">generated/Resumé_short.docx</span>
+
+<span class="p-Indicator">-</span> <span class="l-Scalar-Plain">data</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé-jobseeker.yml</span>
+  <span class="l-Scalar-Plain">outputs</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">format</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Word</span>
+        <span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sources/resumé-template-jobseeker.docx</span>
+        <span class="l-Scalar-Plain">output</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">generated/Resumé_jobseeker.docx</span>
+</pre></div>
+</div>
+<p>In this example, we are generating 4 different resumés, 3 of which are Word format, and 1 of which is text.  Three of them
+use the same resumé content, with one of them presumably using that content to generate a shortened version (with a different template file).
+The fourth one uses a customized resumé content, perhaps with different wording, to generate a specialized resumé.</p>
+<p>Now, let&#8217;s take a look at how the resumé content and output text files are structured.</p>
+<div class="section" id="writing-resume-content">
+<h3>Writing Resumé Content<a class="headerlink" href="#writing-resume-content" title="Permalink to this headline">¶</a></h3>
+<p>Resumé content is written using the <a class="reference external" href="http://en.wikipedia.org/wiki/YAML">YAML</a> format.  The content is broken up into sections, with each section consisting of a list (can be just a single item list)
+of content.  The example below is pretty self-explanatory:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">contact</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">S. Holmes</span>
+        <span class="l-Scalar-Plain">address</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">221B Baker Street, St Marylebone, London, England</span>
+        <span class="l-Scalar-Plain">phone</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">None</span>
+        <span class="l-Scalar-Plain">email</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sherlock@holmesconsulting.com</span>
+        <span class="l-Scalar-Plain">www</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">http://www.gotcrime.com</span>
+
+<span class="l-Scalar-Plain">skills</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Current</span>
+        <span class="l-Scalar-Plain">skill_list</span><span class="p-Indicator">:</span>  <span class="p-Indicator">&gt;</span>
+            <span class="no">Crime solving, cigarette-ash classification, crypto-analysis, disguise</span>
+
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Past</span>
+        <span class="l-Scalar-Plain">skill_list</span><span class="p-Indicator">:</span> <span class="p-Indicator">&gt;</span>
+            <span class="no">Fencing, violin</span>
+
+<span class="l-Scalar-Plain">education</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">degree</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">BA</span>
+        <span class="l-Scalar-Plain">university</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Christ Church College</span>
+        <span class="l-Scalar-Plain">address</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Oxford, England</span>
+        <span class="l-Scalar-Plain">field</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Chemistry</span>
+        <span class="l-Scalar-Plain">date</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">1876</span>
+        <span class="l-Scalar-Plain">gpa</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">5.0</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">degree</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">MA</span>
+        <span class="l-Scalar-Plain">university</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Sidney Sussex</span>
+        <span class="l-Scalar-Plain">address</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Cambridge</span>
+        <span class="l-Scalar-Plain">date</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">1878</span>
+        <span class="l-Scalar-Plain">field</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Criminology</span>
+        <span class="l-Scalar-Plain">gpa</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">3.9</span>
+
+<span class="l-Scalar-Plain">experience</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">company</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Baker Street Detectives</span>
+        <span class="l-Scalar-Plain">location</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">London</span>
+        <span class="l-Scalar-Plain">position</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Consulting Detective</span>
+        <span class="l-Scalar-Plain">date</span><span class="p-Indicator">:</span> <span class="s">&quot;1880</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">1903&quot;</span>
+        <span class="l-Scalar-Plain">summary</span><span class="p-Indicator">:</span> <span class="p-Indicator">&gt;</span>
+            <span class="no">Brought several notorious criminals to justice.  Supported the intelligence services and recovered key</span>
+            <span class="no">government property.</span>
+
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">company</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Beekeeping Solutions</span>
+        <span class="l-Scalar-Plain">location</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Sussex Downs</span>
+        <span class="l-Scalar-Plain">position</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Beekeeper</span>
+        <span class="l-Scalar-Plain">date</span><span class="p-Indicator">:</span> <span class="s">&quot;1904-1914&quot;</span>
+        <span class="l-Scalar-Plain">summary</span><span class="p-Indicator">:</span> <span class="p-Indicator">&gt;</span>
+            <span class="no">Made honey.</span>
+</pre></div>
+</div>
+<p>You can also split the content up into several different files.  For example, the top level file could just be written as:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">contact</span><span class="p-Indicator">:</span>
+    <span class="p-Indicator">-</span>
+        <span class="l-Scalar-Plain">name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">S. Holmes</span>
+        <span class="l-Scalar-Plain">address</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">221B Baker Street, St Marylebone, London, England</span>
+        <span class="l-Scalar-Plain">phone</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">None</span>
+        <span class="l-Scalar-Plain">email</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">sherlock@holmesconsulting.com</span>
+        <span class="l-Scalar-Plain">www</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">http://www.gotcrime.com</span>
+
+<span class="l-Scalar-Plain">skills</span><span class="p-Indicator">:</span> <span class="kt">!include</span> <span class="l-Scalar-Plain">data_skills.yml</span>
+
+<span class="l-Scalar-Plain">education</span><span class="p-Indicator">:</span> <span class="kt">!include</span> <span class="l-Scalar-Plain">data_education.yml</span>
+
+<span class="l-Scalar-Plain">experience</span><span class="p-Indicator">:</span> <span class="kt">!include</span> <span class="l-Scalar-Plain">data_experience.yml</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="writing-templates-for-text-resumes">
+<h3>Writing Templates for Text Resumés<a class="headerlink" href="#writing-templates-for-text-resumes" title="Permalink to this headline">¶</a></h3>
+<p>The text resumé generator uses the <a class="reference external" href="http://www.makotemplates.org">Mako</a> templating engine.  Here&#8217;s an example template that can be used to output
+the above data content into a text file:</p>
+<div class="highlight-python"><div class="highlight"><pre>% for contact in d[&quot;contact&quot;]:
+${contact[&#39;name&#39;]}
+${contact[&#39;phone&#39;]}
+${contact[&#39;email&#39;]}
+${contact[&#39;www&#39;]}
+% endfor
+=========================================
+
+SKILLS:
+-------
+% for skill in d[&quot;skills&quot;]:
+  ${skill[&#39;type&#39;]}:
+    ${s._wrap(2,skill[&#39;skill_list&#39;])}
+% endfor
+
+EDUCATION:
+----------
+% for e in d[&#39;education&#39;]:
+  ${e[&#39;degree&#39;]} from ${e[&#39;university&#39;]} in ${e[&#39;field&#39;]} (${e[&#39;date&#39;]})
+% endfor
+
+EXPERIENCE:
+----------
+% for e in d[&#39;experience&#39;]:
+  ${e[&#39;position&#39;]} (${e[&#39;date&#39;]})
+  ${e[&#39;company&#39;]}, ${e[&#39;location&#39;]}
+  -----------------------------------
+    ${s._wrap(2,e[&#39;summary&#39;])}
+
+% endfor
+</pre></div>
+</div>
+<p>The main things to note are:</p>
+<ul class="simple">
+<li>The resume content from the YAML file is stored as a dictionary in <code class="docutils literal"><span class="pre">d</span></code>.</li>
+<li>Each top-level entry in this dictionary is a list that can be iterated over using Mako syntax.</li>
+<li>There is a helper function called <code class="docutils literal"><span class="pre">s._wrap</span></code> that can be used to indent some text with the
+given number of spaces.</li>
+</ul>
+<p>Using this template, and the data content above, would yield the following text:</p>
+<div class="highlight-python"><div class="highlight"><pre>S. Holmes
+12-3456
+sherlock@holmesconsulting.com
+http://www.gotcrime.com
+=========================================
+
+SKILLS:
+-------
+  Current:
+    Crime solving, cigarette-ash classification, crypto-analysis, disguise
+  Past:
+    Fencing, violin
+
+EDUCATION:
+----------
+  BA from Christ Church College in Chemistry (1876)
+  MA from Sidney Sussex in Criminology (1878)
+
+EXPERIENCE:
+----------
+  Consulting Detective (1880 to 1903)
+  Baker Street Detectives, London
+  -----------------------------------
+    Brought several notorious criminals to justice.  Supported the
+    intelligence services and recovered key government property.
+
+  Beekeeper (1904-1914)
+  Beekeeping Solutions, Sussex Downs
+  -----------------------------------
+    Made honey.
+</pre></div>
+</div>
+</div>
+<div class="section" id="writing-templates-for-word-resumes">
+<h3>Writing Templates for Word Resumés<a class="headerlink" href="#writing-templates-for-word-resumes" title="Permalink to this headline">¶</a></h3>
+<p>Word templates are just regular <code class="docutils literal"><span class="pre">.docx</span></code> files. Please note that you cannot use the old
+Word 97 <code class="docutils literal"><span class="pre">.doc</span></code> format.    You can format it however you want, including bullets and styles.  However, tables
+are <em>not</em> supported at this time.  Here&#8217;s some simple content you might type into a word document to generate
+a resume from the above YAML:</p>
+<div class="highlight-python"><div class="highlight"><pre>[!Contact]
+
+&lt;[name]
+[email]
+[www]
+[phone]
+&gt;
+
+[Experience]
+&lt;[company] – [location] [date]
+[position]
+[summary]
+&gt;
+[Education]
+&lt;[degree] ([university]) in [field] [date]
+&gt;
+[Skills|Mad Skillls]
+&lt;[type] – [skill_list]&gt;
+</pre></div>
+</div>
+<p>The syntax is as follows:</p>
+<ul class="simple">
+<li>Section and item names are enclosed in brackets (<code class="docutils literal"><span class="pre">[</span></code> and <code class="docutils literal"><span class="pre">]</span></code>)</li>
+<li>Looping over sections is done using the <code class="docutils literal"><span class="pre">&lt;</span></code> character for starting the loop, and <code class="docutils literal"><span class="pre">&gt;</span></code> for closing the loop</li>
+<li>Any section name with a <code class="docutils literal"><span class="pre">!</span></code> preceding it will not generate the section text (for instance, no text <code class="docutils literal"><span class="pre">Contact</span></code> will appear in the generated resume).</li>
+<li>Using a <code class="docutils literal"><span class="pre">|</span></code> symbol in a section header will use the proceeding text instead of the section name in the outputted resume. So, the final section above will be rendered with a title of <code class="docutils literal"><span class="pre">Mad</span> <span class="pre">Skills</span></code> instead of <code class="docutils literal"><span class="pre">Skills</span></code>.</li>
+</ul>
+<p>Here&#8217;s a screenshot of the template .docx (you can also find this in the <a class="reference external" href="https://github.com/virantha/one_resume/blob/master/examples/resume.docx?raw=true">repository</a>):</p>
+<a class="reference internal image-reference" href="https://raw.githubusercontent.com/virantha/one_resume/master/images/word_template.png"><img alt="Word resume template" class="align-center" src="https://raw.githubusercontent.com/virantha/one_resume/master/images/word_template.png" style="width: 679px;" /></a>
+<p>And, running OneResumé on it will generate the following:</p>
+<a class="reference internal image-reference" href="https://raw.githubusercontent.com/virantha/one_resume/master/images/word_output.png"><img alt="Word resume output" class="align-center" src="https://raw.githubusercontent.com/virantha/one_resume/master/images/word_output.png" style="width: 679px;" /></a>
+</div>
 </div>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
 <p>Please note that the lxml python library requires a C compiler.  On Mac OS X, you need to make
 sure you have XCode plus the the XCode command line utilities installed:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ xcode-select --install
+</pre></div>
+</div>
 <p>Then, it&#8217;s simply a matter of:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ pip install one_resume
+</pre></div>
+</div>
 </div>
 <div class="section" id="disclaimer">
 <h2>Disclaimer<a class="headerlink" href="#disclaimer" title="Permalink to this headline">¶</a></h2>
