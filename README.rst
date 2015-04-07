@@ -271,12 +271,15 @@ The syntax is as follows:
 
 - Section and item names are enclosed in brackets (``[`` and ``]``)
 - Looping over sections is done using the ``<`` character for starting the loop, and ``>`` for closing the loop
-- Any section name with a ``!`` preceding it will not generate the section text (for instance, no text ``Contact`` will appear in the generated resume.
+- Any section name with a ``!`` preceding it will not generate the section text (for instance, no text ``Contact`` will appear in the generated resume).
 - Using a ``|`` symbol in a section header will use the proceeding text instead of the section name in the outputted resume. So, the final section above will be rendered with a title of ``Mad Skills`` instead of ``Skills``.
 
 Here's a screenshot of the template .docx (you can also find this in the repository):
 
-.. image:: http://raw.githubusercontent.com/virantha/one_resume/master/images/word_template.png
+.. image:: https://raw.githubusercontent.com/virantha/one_resume/master/images/word_template.png
+    :alt: Word resume template
+    :width: 679
+    :align: center
 
 Installation
 ############
