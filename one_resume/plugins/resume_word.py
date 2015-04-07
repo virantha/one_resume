@@ -84,23 +84,47 @@ class WordResume(Plugin):
     'dcmitype': 'http://purl.org/dc/dcmitype/',
     'dcterms':  'http://purl.org/dc/terms/'}
 
+    char_loop_start = '<'
+    char_loop_end   = '>'
+    char_tag_start  = '['
+    char_tag_end    = ']'
+
     def __init__ (self, template_file, resume_data, skip):
         self.skip = skip
         self.resume_data = resume_data
         self.template_filename = template_file
-        self.template = open (self.template_filename)
 
-        self.zipfile = zipfile.ZipFile(self.template)
-        self.doc_etree = self._get_doc_from_docx()
+        # Open the docx file and read in the xml tree
+        self.template = open (self.template_filename)
+        self.doc_etree = self.read_contents(self.template)
 
     def render(self, output_filename):
-        self._parse_xml()
-        self._write_and_close_docx(self.doc_etree, output_filename)
+        """
+            Needs read_contents to have been called
+        """
+        self.substitute_data()
+        self.write_and_close_docx(self.doc_etree, output_filename)
+
+    def read_contents(self, filename):
+        """
+            Unzip and read the contents of the word/document.xml file
+
+            :rtype: the contents of the file as an ElementTree
+        """
+        self.zipfile = zipfile.ZipFile(filename)
+        xml_content = self.zipfile.read('word/document.xml')
+        return etree.fromstring(xml_content)
 
     def _check_element_is(self, element, type_char):
         return element.tag == '{%s}%s' % (self.nsprefixes['w'],type_char)
     def _assert_element_is(self, element, type_char):
         assert self._check_element_is(element, type_char)
+
+    def _get_all_text_in_node(self, node):
+        all_txt = []
+        for txt in node.itertext(tag=etree.Element):
+            all_txt.append(txt)
+        return ''.join(all_txt)
 
     def _get_parent_paragraph(self, text_node):
         self._assert_element_is(text_node, 't')
@@ -110,139 +134,127 @@ class WordResume(Plugin):
         self._assert_element_is(paragraph, 'p')
         return paragraph
 
-    def _find_subtags_in_loop(self, my_etree, subtag_list):
+
+    def _extract_loop(self, paragraph):
         """
+            Find and copy the xml tree fragment that represents the '<' and '>' delimited
+            loop.
+        """
+        inside_loop = False
+        loop_tree = etree.Element("root")  # Create a new tree root
+        prev_paragraph = None
+        list_of_all_loop_nodes = []
+
+        # Keep looking for the first (and only) loop after this tag
+        for node, text, node_index in self._itersiblingtext(paragraph):
+            if '<' in text:
+                assert not inside_loop
+                inside_loop = True
+                loop_start_node = self._get_parent_paragraph(node)
+                self._assert_element_is(loop_start_node, 'p')
+
+            if inside_loop:
+                # This text node is enclosed by a run, which is in turn enclosed by the paragraph
+                # This paragraph is what we want to extract
+                current_paragraph = self._get_parent_paragraph(node)
+                self._assert_element_is(current_paragraph, 'p')
+                if prev_paragraph != current_paragraph:
+                    loop_tree.insert(node_index, copy.deepcopy(current_paragraph))
+                    prev_paragraph = current_paragraph
+                    list_of_all_loop_nodes.append(current_paragraph)
+
+            if '>' in text:
+                assert inside_loop
+                # Done with finding loop, so exit this iterator
+                break
+        logging.debug("Found a loop spanning %d paragraphs, %d" % (node_index, len(loop_tree)))
+        return loop_start_node, loop_tree, list_of_all_loop_nodes
+
+    def _make_loop_instance(self, loop_tree, section_data, all_tagnames_in_section):
+
+        # Copy the loop_tree to make an instance we can fill in with the results from 
+        # the section names
+        loop_instance = copy.deepcopy(loop_tree)
+
+        for node, text, node_i in self._itersiblingtext(loop_instance):
+            if '<' in text: node.text = node.text.replace('<','')
+            if '>' in text: node.text = node.text.replace('>','')
+
+            # For every node with text in it, don't even try to find a tag name
+            # Instead, brute force it by trying to sub every possible tag in every node
+            if node.text:
+                for key in all_tagnames_in_section:
+                    logging.debug("Looking for key %s" % key)
+                    instance_text = section_data.get(key, '')  # Replace any key that isn't specified for this instance with a blank
+                    node.text = node.text.replace('['+key+']', str(instance_text))
+        return loop_instance
+
+    def _fill_in_section(self, section_etree, section_list):
+        """
+            section_list is a list of dicts containing the contents for the current section. For example:
+                
+                [
+                 { key1:val1, key2:val2 },
+                 { key1:val1, key2:val2, key3:val3},
+                ]
+
             Assumptions:
                 - All loop starts are in their own paragraphs
                 - loops can span multiple paragraphs
                 - Any content after the loop must be in different paragraph
                 - No tables anywhere!
         """
-        mTag = r"""\[(?P<tag>[\s\w\_]+)\]"""
-        tags = OrderedDict()
-
         # Get the parent paragraph 
-        paragraph = self._get_parent_paragraph(my_etree)
+        paragraph = self._get_parent_paragraph(section_etree)
 
-        # Variables to track the state of our traversals
-        loop_done = False
-        loop_tree_index = 0
-        inside_loop = False
-
-        # Keep track of all the elements belonging to the loop body
-        # so that we can delete the original loop definition once
-        # we are done instancing the loop.
-        elements_to_delete = []
-        # build up a copy of the loop sub-tree in loop_tree
-        # We will instance this as many times as needed
-        loop_tree = etree.Element("root")  # Keep a copy of the loop that we find
-        for node, text, node_index in self._itersiblingtext(paragraph):
-            if '<' in text:
-                logging.debug("Found <")
-                if inside_loop:  # embedded loop!
-                    # Let's recurse on this embedded loop
-                    #  We need the immediately preceding tag text to figure
-                    # out what dict we need to recurse on
-                    self._find_subtags_in_loop
-                else:
-                    inside_loop = True
-                    loop_tree_start = (node.getparent().getparent())
-                    self._assert_element_is(loop_tree_start, 'p')
-
-                    elements_to_delete.append(loop_tree_start)
-                    loop_tree.insert(0, copy.deepcopy(loop_tree_start))
-
-                    #logging.debug(etree.tostring(loop_tree, pretty_print=True))
-            if '>' in text:
-                assert inside_loop
-                logging.debug("Found >")
-                loop_done = True
-                if node_index != loop_tree_index:
-                    self._assert_element_is(node.getparent().getparent(), 'p')
-                    loop_tree.insert(loop_tree_index+1,  copy.deepcopy(node.getparent().getparent()))
-                    loop_tree_index += 1
-                    elements_to_delete.append(node.getparent().getparent())
-                    assert (node_index == loop_tree_index)
-                break
-            if inside_loop:
-                # Have to check if we've moved to a different paragraph
-                # If so, we need to add it to the tree
-                logging.debug("Here")
-                if node_index != loop_tree_index:
-                    logging.debug("Adding inside loop text node")
-                    self._assert_element_is(node.getparent().getparent(), 'p')
-
-                    loop_tree.insert(loop_tree_index+1,  copy.deepcopy(node.getparent().getparent()))
-                    loop_tree_index += 1
-
-                    logging.debug(etree.tostring(loop_tree, pretty_print=True))
-                    elements_to_delete.append(node.getparent().getparent())
-                    assert (node_index == loop_tree_index)
-                    
-        logging.debug("Found a loop spanning %d paragraphs, %d" % (loop_tree_index+1, len(loop_tree)))
-        logging.debug(etree.tostring(loop_tree, pretty_print=True))
-
+        # Build up a copy of the loop sub-tree in loop_tree. We will instance this as many times as needed.
+        # Also, keep track of all the elements belonging to the loop body in elements_to_delete
+        # so that we can delete the original loop definition once we are done instancing the loop.
+        loop_start_node, loop_tree, elements_to_delete = self._extract_loop(paragraph)
+        
         # Max possible set of subtags
-        subtag_keys = self._get_all_keys_in_list_of_dicts(subtag_list)
+        all_tag_names_in_section = self._get_all_keys_in_list_of_dicts(section_list)
 
+        # Iterate and create the loop with the section data
         loop_instance = []
-        for subtag_dict in subtag_list:
-            loop_done = False
-            # Create a copy of the loop_tree
-            #loop_instance.append([])
-            loop_instance.append(copy.deepcopy(loop_tree))
-            logging.debug("Applying loop element: %s" % subtag_dict)
-
-            for node, text, node_i in self._itersiblingtext(loop_instance[-1]):
-                logging.debug("Going through text")
-                if '<' in text:
-                    node.text = node.text.replace('<','')
-                if '>' in text:
-                    node.text = node.text.replace('>','')
-                tag_text = re.findall(mTag, text)
-                logging.debug("tag text is %s" % tag_text)
-                if node.text:
-                    for key in subtag_keys:
-                        logging.debug("Looking for key %s" % key)
-                        if key in subtag_dict:
-                            node.text = node.text.replace('['+key+']', str(subtag_dict[key]))
-                        else:
-                            node.text = node.text.replace('['+key+']', '')
-                for tag in tag_text:
-                    tag = tag.lower()
-                    tags[tag] = node
+        for section_data in section_list:
+            loop_instance.append(self._make_loop_instance(loop_tree, section_data, all_tag_names_in_section))
 
         # Now, add the loop_instance to the body
-        body = loop_tree_start.getparent()
-        index_to_insert_at = body.index(loop_tree_start)+1
-        #logging.debug("Inserting at index %d" % index_to_insert_at)
-        logging.debug("Inserting at index %d, %d instances" % (index_to_insert_at, len(loop_instances)))
+        body = loop_start_node.getparent()
+        index_to_insert_at = body.index(loop_start_node)+1
+        logging.debug("Inserting at index %d, %d instances" % (index_to_insert_at, len(loop_instance)))
         for inst in loop_instance:
-            #logging.debug(etree.tostring(body, pretty_print=True))
             for child in inst.getchildren():
                 body.insert(index_to_insert_at, child)
                 index_to_insert_at += 1
 
         # Delete the loop template
         for e in elements_to_delete:
-            #body.remove(e)
-            pass
+            body.remove(e)
 
-
-        if '[!' in my_etree.text:
+        # Remove a section heading name if it's preceded with a bang (for example, a contact section, where
+        # we don't need to title the section
+        if '[!' in section_etree.text:
             paragraph.getparent().remove(paragraph)
-        return tags
 
-    def _find_tags(self, my_etree, tags_to_find, char_to_stop_on=None):
+    def _find_sections(self, my_etree, tags_to_find, char_to_stop_on=None):
         """
-            Build a dict of all the tags in the document and the corresponding
-            text node
+            Build a dict of all the top-level tags in the document and the corresponding
+            text node.
+
+            Also replace the top level tag header with the section name
+
+            :rtype: Dict of tag name -> xml node
             
         """
 
         tags = {}
         logging.debug("Looking for tags: %s" % (','.join(tags_to_find)))
         mTag = r"""\[\!?(?P<tag>[\s\w\_\|]+)\]"""
+        # lowercase all the tags_to_find, just in case the user upper-cased some of them
+        tags_to_find = [x.lower() for x in tags_to_find]
+
         for node,text in self._itertext(my_etree):
             tag_text = re.findall(mTag, text) 
             if tag_text:
@@ -261,6 +273,7 @@ class WordResume(Plugin):
                         node.text = node.text.replace('['+tag+']', tag)
                         if '|' in node.text:
                             # We have alternate text so just use that
+                            # FIXME:  This is wrong, we need to sub out the text, and not replace the whole node!
                             node.text = node.text.split('|')[1]
 
         return tags
@@ -272,17 +285,19 @@ class WordResume(Plugin):
                 mykeys.add(k)
         return list(mykeys)
 
-    def _parse_xml(self):
+    def substitute_data(self):
 
         body = self.doc_etree.xpath('/w:document/w:body', namespaces=self.nsprefixes)[0]
-        self._join_tags(body)
+        self.collapse_tags(body)
+
         if self.skip:
             return
+
         # Get a list of all the top-level tags
-        tags = self._find_tags(self.doc_etree, self.resume_data.keys())
-        for section_name, node in tags.items():
+        sections = self._find_sections(self.doc_etree, self.resume_data.keys())
+        for section_name, section_node in sections.items():
             logging.debug("Subtag search for %s" % section_name)
-            subtags = self._find_subtags_in_loop(node,self.resume_data[section_name])
+            self._fill_in_section(section_node, self.resume_data[section_name])
             logging.debug("Finished find_subtags_in_loop")
         return
 
@@ -305,57 +320,57 @@ class WordResume(Plugin):
                     if self._check_element_is(node, 't'):
                         yield (node, node.text, i)
 
-    def _join_tags(self, my_etree):
-        chars = []
-        openbrac = False
-        inside_openbrac_node = False
 
+    def collapse_tags(self, my_etree):
+        """
+            Find the special tags and collapse all the text in them to one single paragraph. This
+            method works in-place, modifying the passed in etree.
+            This works because we know there shouldn't be any formatting inside the tag name.
+
+
+            :rtype: Nothing
+        """
+        chars = []
+        is_tag_start = False      # True if inside tag
+        tag_start_node = None     # Pointer to current node. 
+        tag_start_char = '['
+        tag_end_char = ']'
+
+        # For every node with text
         for node,text in self._itertext(my_etree):
-            # Scan through every node with text
+            # Go through each node's text character by character
             for i,c in enumerate(text):
-                # Go through each node's text character by character
-                if c == '[':
-                    openbrac = True # Within a tag
-                    inside_openbrac_node = True # Tag was opened in this node
-                    openbrac_node = node # Save ptr to open bracket containing node
+                if c == tag_start_char:  # Tag is starting!
+                    assert not is_tag_start  # Better not already be inside a tag!
+                    is_tag_start = True 
+                    tag_start_node = node 
                     chars = []
-                elif c== ']':
-                    assert openbrac
-                    if inside_openbrac_node:
-                        # Open and close inside same node, no need to do anything
-                        pass
-                    else:
-                        # Open bracket in earlier node, now it's closed
-                        # So append all the chars we've encountered since the openbrac_node '['
-                        # to the openbrac_node
-                        chars.append(']')
-                        openbrac_node.text += ''.join(chars)
-                        # Also, don't forget to remove the characters seen so far from current node
-                        node.text = text[i+1:] 
-                    openbrac = False
-                    inside_openbrac_node = False
+                elif c == tag_end_char:  # Tag is ending
+                    assert is_tag_start  # Better have seen a tag start!
+                    is_tag_start = False
+                    # If tag_start_node is the same as current node, then we don't need to do anything
+                    # But otherwise:
+                    if node != tag_start_node:
+                        # Tag started in different node, so move all the chars we've encountered since then
+                        # to the tag_start_node
+                        chars.append(c)
+                        tag_start_node.text += ''.join(chars)
+                        node.text = text[i+1:]   # Remove characters from this node
                 else:
                     # Normal text character
-                    if openbrac and inside_openbrac_node:
-                        # No need to copy text
-                        pass
-                    elif openbrac and not inside_openbrac_node:
+                    if is_tag_start and node != tag_start_node:
+                        # Need to save these chars to append to text in openbrac_node
                         chars.append(c)
-                    else:
-                        # outside of a open/close
-                        pass
-            if openbrac and not inside_openbrac_node:
-                # Went through all text that is part of an open bracket/close bracket
-                # in other nodes
-                # need to remove this text completely
+
+            # If we're here, that means we've consumed all the text in the current node.
+            # Check if this node was part of a tag, yet did not start the tag
+            if is_tag_start and node!= tag_start_node:
+                # Need to remove this text completely as we've saved all of it inside chars for moving
+                # into the start_node
                 node.text = ""
-            inside_openbrac_node = False
 
-    def _get_doc_from_docx (self):
-        xml_content = self.zipfile.read('word/document.xml')
-        return etree.fromstring(xml_content)
 
-    def _write_and_close_docx (self, xml_content, output_filename):
+    def write_and_close_docx (self, xml_content, output_filename):
         """ Create a temp directory, expand the original docx zip.
             Write the modified xml to word/document.xml
             Zip it up as the new docx
@@ -380,5 +395,12 @@ class WordResume(Plugin):
 
         # Clean up the temp dir
         shutil.rmtree(tmp_dir)
+
+
+if __name__ == '__main__':
+    script = WordAPI('test/blah.docx', {}, False)
+    print (etree.tostring(script.doc_etree, pretty_print=True))
+    script.collapse_tags(script.doc_etree)
+    print (etree.tostring(script.doc_etree, pretty_print=True))
 
 
