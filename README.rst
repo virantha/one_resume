@@ -276,7 +276,7 @@ The syntax is as follows:
 
 Here's a screenshot of the template .docx (you can also find this in the repository):
 
-
+.. image:: http://raw.githubusercontent.com/virantha/one_resume/master/images/word_template.png
 
 Installation
 ############
