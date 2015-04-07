@@ -13,9 +13,11 @@ Features
 
 * Keep your resumé content in simple text files and automatically generate different versions
   of your resumés in multiple formats (currently supports generating text and Microsoft Word .docx format resumés)
+
 * Allows you to break up your resumé content into multiple files, so you can pick and choose the sections you want for each generated version
     * For example, if you want one resumé with your publications, but want to skip them for a shorter version, you can maintain the publications
       list in a separate input file, and keep both generated resumés synchronized with the other content.
+
 * Plugin architecture, so you can easily extend to other formats (LaTex coming soon)
 
 Usage:
