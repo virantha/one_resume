@@ -1,10 +1,10 @@
 OneResumé - Usage Guide
 =========================================
+|image_pypi| |image_downloads| |image_license| |passing| |quality| |Coverage Status|
+
 OneResumé is a data-driven resumé generator for text and Microsoft Word
 documents.  Write your resumé content in YAML_ and quickly and easily generate
 multiple versions and formats of your resumé using this program.
-
-|image_pypi| |image_downloads| |image_license| |passing| |quality| |Coverage Status|
 
 * Free and open-source software: ASL2 license
 * Blog: http://virantha.com/category/projects/one_resume
