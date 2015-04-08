@@ -155,8 +155,10 @@ class OneResume(object):
         self.getOptions(argv)
         self.run_rendering()
 
-if __name__ == '__main__':
+def main(): #pragma: no cover
     script = OneResume()
     script.go(sys.argv[1:])
 
+if __name__ == '__main__':
+    main()
 
