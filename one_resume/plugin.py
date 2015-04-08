@@ -25,6 +25,8 @@ import logging
 
 import imp
 import pkgutil
+import pkg_resources
+import sys
 
 
 class Plugin(object):
@@ -35,20 +37,13 @@ class Plugin(object):
             if not hasattr(cls, 'registered'):
                 cls.registered = {}
             else:
-                #cls.registered.append(cls)
                 cls.registered[name] = cls
                                      
     @classmethod
-    def load(cls, *paths):
-        paths = list(paths)
+    def load(cls):
         cls.registered = {}
-        for _, name, _ in pkgutil.iter_modules(paths):
-            fid, pathname, desc = imp.find_module(name, paths)
-            try:
-                imp.load_module(name, fid, pathname, desc)
-            except Exception as e:
-                logging.warning("could not load plugin module '%s': %s",
-                                pathname, e.message)
-            if fid:
-                fid.close()
+
+        for plugin in pkg_resources.iter_entry_points('one_resume.plugins'):
+            plugin.load()
+
 

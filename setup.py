@@ -54,6 +54,10 @@ setup (
             'console_scripts': [
                     'one_resume = one_resume.one_resume:main'
                 ],
+            'one_resume.plugins': [
+                    'Word = one_resume.plugins.resume_word:WordResume',
+                    'Text = one_resume.plugins.resume_text:TextResume'
+                ]
         },
     options = {
 	    "pyinstaller": {"packages": packages}

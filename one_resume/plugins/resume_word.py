@@ -42,7 +42,6 @@
 
 import zipfile, re
 import os,shutil
-from plugin import Plugin
 from lxml import etree
 import logging
 import itertools
@@ -50,7 +49,7 @@ import copy
 from collections import OrderedDict
 import tempfile
 
-from plugin import Plugin
+from one_resume.plugin import Plugin
 
 class WordResume(Plugin):
 

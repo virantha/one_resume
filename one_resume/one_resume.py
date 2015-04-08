@@ -45,9 +45,7 @@ yaml.add_constructor("!include", yaml_include)
 class OneResume(object):
 
     def __init__ (self):
-        #Plugin.load("plugins/")
-        script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-        Plugin.load(os.path.join(script_dir,"plugins"))
+        Plugin.load()
         self.allowed_filetypes = []
         self.allowed_formats = []
         for p, p_class in Plugin.registered.items():

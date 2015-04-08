@@ -16,7 +16,7 @@
 import logging
 from mako.template import Template
 from textwrap import TextWrapper
-from plugin import Plugin
+from one_resume.plugin import Plugin
 
 class TextResume(Plugin):
 
