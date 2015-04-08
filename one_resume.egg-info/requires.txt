@@ -1,3 +1,0 @@
-pyyaml>=3.1.0
-mako
-lxml
