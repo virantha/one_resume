@@ -7,7 +7,7 @@ documents.  Write your resumé content in YAML_ and quickly and easily generate
 multiple versions and formats of your resumé using this program.
 
 * Free and open-source software: ASL2 license
-* Blog: http://virantha.com/category/projects/one_resume
+* Blog: http://virantha.com/category/oneresume.html
 * Documentation: http://virantha.github.io/one_resume/html
 * Source: https://github.com/virantha/one_resume
 
