@@ -15,14 +15,29 @@
 
 
 """
-    OneResume
+    OneResume - data-driven resume generation
 
-        - Write your resume in YAML
-        - Output it to word, html, txt, etc
+    Usage:
+        one_resume single -t <template-file> -y <yaml-file> -o <output-file> -f <format> [-v|-d]
+        one_resume batch -c <config-file> [-v|-d]
+        one_resume -h | --help
+        one_resume --version
+
+    Options:
+        -h --help             Show this screen
+        -v --verbose          Verbose logging
+        -d --debug            Debug logging
+        -t <template-file>    Template file (input)
+        -y <yaml-file>        Resume content (YAML file)
+        -o <output-file>      Output file
+        -f <format>           Format (can be either Word or Text)
+        -c <config-file>      Configuration file (YAML) for batch generation
+
 """
 from __future__ import print_function
+from version import __version__
 
-import argparse
+import docopt
 import sys, os
 import logging
 import yaml
@@ -53,66 +68,31 @@ class OneResume(object):
             self.allowed_filetypes.append(p_class.template_file_extension)
             self.allowed_formats.append(p.split('Resume')[0])
 
-    def getOptions(self, argv):
-        p = argparse.ArgumentParser(prog="oneresume.py")
+    def getOptions(self, args):
+        #print (args)
+        self.debug = args['--debug']
+        self.verbose = args['--verbose']
 
-        p.add_argument('-d', '--debug', action='store_true',
-            default=False, dest='debug', help='Turn on debugging')
+        if self.debug: logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+        if self.verbose: logging.basicConfig(level=logging.INFO, format='%(message)s')
 
-        p.add_argument('-v', '--verbose', action='store_true',
-            default=False, dest='verbose', help='Turn on verbose mode')
-        p.add_argument('-s', '--skip-substitution', action='store_true',
-            default=False, dest='skip', help='Skip the text substitution and just write out the template as is (useful for pretty-printing')
-
-        # Now split up the options on whether we just run one template rendering
-        # or use a "batch" mode to read a yaml config file to run multiple
-        subparsers = p.add_subparsers(help="Type of processing to run",
-                                        dest = "subparser_name")
-
-        parser_singlefile = subparsers.add_parser('single', help='Run a single conversion')
-        parser_singlefile.add_argument('-t', '--template-file', required=True, 
-            help='Template filename %s' % self.allowed_filetypes)
-        parser_singlefile.add_argument('-y', '--yaml-resume-file', required=True, 
-            help='Resume yaml filename')
-        parser_singlefile.add_argument('-o', '--output-file', required=True, 
-            help='Output filename')
-        parser_singlefile.add_argument('-f', '--format', required=True, 
-            choices = self.allowed_formats,
-            help='Conversion type %s' % self.allowed_formats )
-
-
-        parser_configfile = subparsers.add_parser('batch', help="Run multiple conversions using a yaml config file as input")
-        parser_configfile.add_argument('-c', '--config-file', required=True, type=argparse.FileType('r'),
-             help='configuration YAML filename ' )
-
-
-        args = p.parse_args(argv)
-
-        self.debug = args.debug
-        self.verbose = args.verbose
-        self.skip = args.skip
-
-        if args.debug:
-            logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-
-        if args.verbose:
-            logging.basicConfig(level=logging.INFO, format='%(message)s')
-
-        # Normal options
-        if args.subparser_name == 'single':
+        if args['single']:
             self.config = yaml.load("""-
-                                        data: %s
+                                        data: %(-y)s
                                         outputs:
                                             - 
-                                                format: %s
-                                                template: %s
-                                                output: %s
-                                    """ % (args.yaml_resume_file, args.format, args.template_file, args.output_file ))
+                                                format: %(-f)s
+                                                template: %(-t)s
+                                                output: %(-o)s
+                                    """ % (args))
+        elif args['batch']:
+            config_file = args['-c']
+            with open(config_file) as f:
+                logging.debug("Reading configuration file %s" % config_file)
+                self.config = yaml.load(f)
         else:
-            config_file = args.config_file
-            logging.debug("Reading configuration file %s" % config_file)
-            self.config = yaml.load(config_file)
-            config_file.close()
+            assert False, "docopt command line parsing broken??"
+
 
     def run_rendering(self):
         """
@@ -143,19 +123,20 @@ class OneResume(object):
                 output_filename = output['output']
                 # Instantiate the required conversion plugin
                 print ("Creating %s ..." % output_filename, end='')
-                text = Plugin.registered['%sResume' % fmt](template_file, self.resume, self.skip)
+                text = Plugin.registered['%sResume' % fmt](template_file, self.resume, False)
                 text.render(output_filename)
                 print (" done")
 
 
-    def go(self, argv):
-        # Read the command line options
-        self.getOptions(argv)
+    def go(self, args):
+        # Read the command line options, already parsed into a dict by docopt
+        self.getOptions(args)
         self.run_rendering()
 
 def main(): #pragma: no cover
+    args = docopt.docopt(__doc__, version='OneResume %s' % __version__) 
     script = OneResume()
-    script.go(sys.argv[1:])
+    script.go(args)
 
 if __name__ == '__main__':
     main()

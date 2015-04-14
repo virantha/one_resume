@@ -1,5 +1,4 @@
 Todo list
 =========
 
-- Do more
-- Add more docstrings
+- Add pytests and hook in hypothesis
